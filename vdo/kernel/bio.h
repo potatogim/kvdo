@@ -50,7 +50,9 @@ void bioCopyDataOut(BIO *bio, char *dataPtr);
 /**********************************************************************/
 static inline unsigned long bioDiscardRWMask(void)
 {
-#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  return REQ_OP_DISCARD;
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
   return BIO_DISCARD;
 #else
   return REQ_DISCARD;
@@ -80,7 +82,9 @@ static inline unsigned long bioSyncIoRWMask(void)
 /**********************************************************************/
 static inline bool isDiscardBio(BIO *bio)
 {
-#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  return (bio != NULL) && ((bio->bi_opf & REQ_OP_DISCARD) != 0);
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
   return (bio != NULL) && bio_rw_flagged(bio, BIO_RW_DISCARD);
 #else
   return (bio != NULL) && ((bio->bi_rw & REQ_DISCARD) != 0);
@@ -90,7 +94,9 @@ static inline bool isDiscardBio(BIO *bio)
 /**********************************************************************/
 static inline bool isFlushBio(BIO *bio)
 {
-#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  return (bio->bi_opf & REQ_OP_FLUSH) != 0;
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
   return bio_rw_flagged(bio, BIO_RW_FLUSH);
 #else
   return (bio->bi_rw & REQ_FLUSH) != 0;
@@ -100,7 +106,9 @@ static inline bool isFlushBio(BIO *bio)
 /**********************************************************************/
 static inline bool isFUABio(BIO *bio)
 {
-#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  return (bio->bi_opf & REQ_FUA) != 0;
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
   return bio_rw_flagged(bio, BIO_RW_FUA);
 #else
   return (bio->bi_rw & REQ_FUA) != 0;
@@ -110,7 +118,10 @@ static inline bool isFUABio(BIO *bio)
 /**********************************************************************/
 static inline bool isReadBio(BIO *bio)
 {
-#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  return (bio->bi_opf & REQ_WRITE) == 0;
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
   return !bio_rw_flagged(bio, BIO_RW);
 #else
   return (bio->bi_rw & REQ_WRITE) == 0;
@@ -120,7 +131,9 @@ static inline bool isReadBio(BIO *bio)
 /**********************************************************************/
 static inline bool isEmptyFlush(BIO *bio)
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  return (bio->bi_opf & REQ_OP_FLUSH) != 0;
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)
   return bio_empty_barrier(bio) || bio_rw_flagged(bio, BIO_RW_FLUSH);
 #else
   return (bio->bi_rw & REQ_FLUSH) != 0;
@@ -130,7 +143,9 @@ static inline bool isEmptyFlush(BIO *bio)
 /**********************************************************************/
 static inline bool isWriteBio(BIO *bio)
 {
-#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  return (bio->bi_opf & REQ_WRITE) != 0;
+#elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
   return bio_rw_flagged(bio, BIO_RW);
 #else
   return (bio->bi_rw & REQ_WRITE) != 0;
@@ -203,7 +218,10 @@ static inline sector_t getBioSector(BIO *bio)
  **/
 static inline void completeBio(BIO *bio, int error)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,13,0)
+  bio->bi_status = error;
+  bio_endio(bio);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4,4,0)
   bio->bi_error = error;
   bio_endio(bio);
 #else
