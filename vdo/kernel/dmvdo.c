@@ -215,7 +215,11 @@ static void vdoIoHints(struct dm_target *ti, struct queue_limits *limits)
   // Discard hints
   limits->max_discard_sectors = maxDiscardSectors;
   limits->discard_granularity = VDO_BLOCK_SIZE;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  // Something
+#else
   limits->discard_zeroes_data = 1;
+#endif
 }
 
 /**********************************************************************/
@@ -240,12 +244,22 @@ static int vdoIterateDevices(struct dm_target           *ti,
    */
   struct request_queue *q = bdev_get_queue(layer->dev->bdev);
   unsigned int flush_flags = q->flush_flags;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  // Something
+#else
   q->flush_flags = REQ_FLUSH | REQ_FUA;
+#endif
 
   int result = fn(ti, layer->dev, 0, len, data);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  // Something
+#else
   q->flush_flags = flush_flags;
   return result;
+#endif
+
 #endif /* HAS_FLUSH_SUPPORTED */
 }
 
@@ -680,11 +694,21 @@ static int vdoInitialize(struct dm_target *ti,
   }
 
   struct request_queue *requestQueue = bdev_get_queue(dev->bdev);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
+  // Something
   logInfo("underlying device, REQ_FLUSH: %s, REQ_FUA: %s",
           (((requestQueue->flush_flags & REQ_FLUSH) == REQ_FLUSH)
            ? "supported" : "not supported"),
           (((requestQueue->flush_flags & REQ_FUA) == REQ_FUA)
            ? "supported" : "not supported"));
+#else
+  logInfo("underlying device, REQ_FLUSH: %s, REQ_FUA: %s",
+          (((requestQueue->flush_flags & REQ_FLUSH) == REQ_FLUSH)
+           ? "supported" : "not supported"),
+          (((requestQueue->flush_flags & REQ_FUA) == REQ_FUA)
+           ? "supported" : "not supported"));
+#endif
 
   uint64_t   blockSize      = VDO_BLOCK_SIZE;
   uint64_t   logicalSize    = to_bytes(ti->len);

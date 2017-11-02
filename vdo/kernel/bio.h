@@ -120,7 +120,7 @@ static inline bool isReadBio(BIO *bio)
 {
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
-  return (bio->bi_opf & REQ_WRITE) == 0;
+  return (bio->bi_opf & REQ_OP_WRITE) == 0;
 #elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
   return !bio_rw_flagged(bio, BIO_RW);
 #else
@@ -144,7 +144,7 @@ static inline bool isEmptyFlush(BIO *bio)
 static inline bool isWriteBio(BIO *bio)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4,8,0)
-  return (bio->bi_opf & REQ_WRITE) != 0;
+  return (bio->bi_opf & REQ_OP_WRITE) != 0;
 #elif LINUX_VERSION_CODE == KERNEL_VERSION(2,6,32)
   return bio_rw_flagged(bio, BIO_RW);
 #else
